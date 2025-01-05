@@ -10,11 +10,12 @@ const app = new Hono<{
     DATABASE_URL: string;
     JWT_SECRET: string;
   }
-}>() // tells typescript that database url is string
+}>() // tells typescript the data type of url in the .toml file
 
 enum ResponseStatus {
   Success = 200,
   NotFound = 404,
+  Unauthorized = 403,
   Refuse = 411,
   Error = 500
 }
@@ -30,7 +31,7 @@ app.post('/api/v1/users/signup', async (c) => {
     const find_user = await prisma.user.findUnique({
       where:{
         username: body.username,
-      }
+      },
     });
 
     if (find_user){
@@ -52,7 +53,7 @@ app.post('/api/v1/users/signup', async (c) => {
       id: user.id, username: user.username, name: user.name,
     },c.env.JWT_SECRET)
 
-    return c.text(jwt);
+    return c.json({jwt});
   }
   catch(e){
     console.log(e);
@@ -61,9 +62,37 @@ app.post('/api/v1/users/signup', async (c) => {
   }
 })
 
-app.post('/api/v1/users/signin', (c) => {
-  return c.text('Hello Hono!')
-})
+app.post('/api/v1/users/signin', async(c) => {
+  const body = await c.req.json();
+  const prisma = new PrismaClient({
+    datasourceUrl: c.env.DATABASE_URL, //through c var we have the access of database url so can't dec it globally
+  }).$extends(withAccelerate())
+
+  try{
+    const user = await prisma.user.findUnique({
+      where:{
+        username: body.username,
+        password: body.password,
+      },
+    });
+
+    if(!user){
+      c.status(ResponseStatus.Unauthorized)
+      return c.json({
+        error: "incorrect credentials",
+      })
+    }
+    const jwt = await sign({
+      id: user.id, username: user.username, name: user.name
+    },c.env.JWT_SECRET);
+    return c.json({jwt});
+  }
+  catch(e){
+    c.status(ResponseStatus.Refuse);
+    console.log("error",e);
+    return c.json({"message": "error in signing in"});
+  }
+});
 
 app.post('/api/v1/blog', (c) => {
   return c.text('Hello Hono!')
