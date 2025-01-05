@@ -8,6 +8,8 @@
     "@prisma/client": "^6.1.0",
     "@prisma/extension-accelerate": "^1.2.1",
     "hono": "^4.6.15",
+    "moment": "^2.30.1",
+    "moment-timezone": "^0.5.46",
     "prisma": "^6.1.0"
   },
   "devDependencies": {
