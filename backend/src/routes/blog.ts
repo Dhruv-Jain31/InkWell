@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { PrismaClient } from "@prisma/client/extension";
 import { withAccelerate } from "@prisma/extension-accelerate";
 import { Hono } from "hono"
@@ -52,13 +53,72 @@ blogRouter.post('/', async(c) => {
     }
 })
 
-blogRouter.put('/', (c) => {
-    return c.text('Hello Hono!')
-})
+blogRouter.put('/', async(c) => {
+    const body = await c.req.json();
 
-blogRouter.get('/', (c) => {
-    return c.text('Hello Hono2!')
-})
+    const prisma = new PrismaClient({
+        datasourceUrl: c.env.DATABASE_URL,
+    }).$extends(withAccelerate());
+    try{
+        const blog = await prisma.blog.update({
+            where:{
+                id : body.id,
+                authorId: 1,
+            },
+            data: {
+                title: body.title,
+                content: body.content,
+                published: body.published,
+            },
+        });
+        return c.json({
+            "message": "Blog updated Successfully: " + blog.id,
+        });
+    }
+    catch(err){
+        console.log("Error: ", err);
+        c.status(ResponseStatus.Error);
+        return c.json({
+            "message": "Internal Server Error"
+        });
+    }
+});
+
+blogRouter.get("/:id", async(c) => {
+    const id = c.req.param("id");
+
+    const prisma = new PrismaClient({
+        datasourceUrl: c.env.DATABASE_URL
+    }).$extends(withAccelerate());
+    try{
+        const blog = await prisma.blog.findUnique({
+            where: {
+                id : id,
+            },
+            select: {
+                author: {
+                    select: {
+                        name: true,
+                    },
+                },
+                content: true,
+                title: true,
+                id: true,
+                postedOn: true,
+                published: true,
+                authorId: true,
+            }
+        });
+        return c.json({blog});
+    }
+    catch(err){
+        console.log("Error: ", err);
+        c.status(ResponseStatus.Error);
+        c.json({
+            "message": "Internal server error",
+        });
+    }
+});
 
 blogRouter.get('/bulk', (c) => {
     return c.text('Hello Hono!')
