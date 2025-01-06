@@ -1,13 +1,17 @@
 import { Prisma } from "@prisma/client";
 import { PrismaClient } from "@prisma/client/extension";
 import { withAccelerate } from "@prisma/extension-accelerate";
-import { Hono } from "hono"
+import { Hono } from "hono";
+import authMiddleware from "../authMiddleware"
 import * as moment from "moment-timezone";
 
 export const blogRouter = new Hono<{
     Bindings: {
         DATABASE_URL: string;
         JWT_SECRET: string;
+    };
+    Variables: {
+        userId: string;
     }
 }>();
 
@@ -18,12 +22,6 @@ enum ResponseStatus {
     Refuse = 411,
     Error = 500
 }
-
-
-blogRouter.use("/*", (c,next)) => {
-    next();
-});
-
 
 blogRouter.post('/', async(c) => {
     const body = await c.req.json();
@@ -37,7 +35,7 @@ blogRouter.post('/', async(c) => {
             data: {
                 title: body.title,
                 content: body.content,
-                authorId: 1,
+                authorId: c.get("userId"),
                 postedOn: indian_Time,
                 published: body.published,
             },
@@ -63,7 +61,7 @@ blogRouter.put('/', async(c) => {
         const blog = await prisma.blog.update({
             where:{
                 id : body.id,
-                authorId: 1,
+                authorId: c.get("userId"),
             },
             data: {
                 title: body.title,
@@ -164,7 +162,7 @@ blogRouter.delete("/:id", async (c) => {
 		const res = await prisma.post.delete({
 			where: {
 				id: id,
-				authorId: 1
+				authorId: c.get("userId"),
 			},
 		});
 		console.log(res);
