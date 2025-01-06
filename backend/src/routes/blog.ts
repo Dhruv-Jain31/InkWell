@@ -120,6 +120,63 @@ blogRouter.get("/:id", async(c) => {
     }
 });
 
-blogRouter.get('/bulk', (c) => {
-    return c.text('Hello Hono!')
-})
+blogRouter.get('/bulk', async(c) => {
+    const prisma = new PrismaClient({
+        datasourceUrl: c.env.DATABASE_URL,
+    }).$extends(withAccelerate());
+
+    try{
+        const blogs = await prisma.blog.findMany({
+            where: {
+                published: true,
+            },
+            select:{
+                content: true,
+                title: true,
+                id: true,
+                postedOn: true,
+                published: true,
+                authorId: true,
+                author: {
+                    select: {name: true},
+                },
+            },
+        });
+        return c.json({
+            blogs,
+        });
+    }
+    catch(err){
+        console.log("Error: " + err);
+        c.status(ResponseStatus.Error);
+        return c.json({"message": "Internal Server Error"});
+    }
+});
+
+blogRouter.delete("/:id", async (c) => {
+	const id = c.req.param("id");
+
+	const prisma = new PrismaClient({
+		datasourceUrl: c.env?.DATABASE_URL,
+	}).$extends(withAccelerate());
+
+	try {
+		const res = await prisma.post.delete({
+			where: {
+				id: id,
+				authorId: 1
+			},
+		});
+		console.log(res);
+		return c.json({
+			message: "Post deleted successfully",
+		});
+	} catch (error) {
+		console.log("Error: ", error);
+		c.status(403);
+		return c.json({
+			message: "Internal Server Error",
+		});
+	}
+});
+
