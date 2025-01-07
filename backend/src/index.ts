@@ -12,6 +12,10 @@ const app = new Hono<{
 app.route("/api/v1/user", userRouter);
 app.route("/api/v1/blog", blogRouter);
 
+console.log("Routes registered:");
+console.log("/api/v1/user -> userRouter");
+console.log("/api/v1/blog -> blogRouter");
+
 
 export default app
 
