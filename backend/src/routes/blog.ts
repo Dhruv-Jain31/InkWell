@@ -85,6 +85,19 @@ blogRouter.put('/', async(c) => {
     }
 });
 
+/*An issue occurs because the /bulk route conflicts with the dynamic /:id route. Since /bulk matches the pattern of /blog/:id,
+your router treats bulk as the id parameter for the /:id route.
+
+Why This Happens
+When a router processes a request, it matches routes in the order they are declared. Since /bulk is a string and /blog/:id is a dynamic route,
+the router doesn't differentiate between them if /blog/:id comes first. Therefore, it interprets /bulk as if it were the id.
+
+How to Fix It
+Solution : Declare /bulk Before /:id
+The router matches routes in the order they are declared. Place the /bulk route before the /:id route in your router file. */
+
+
+
 blogRouter.get('/bulk', async(c) => {
     if (c.req.param("id")) {
         return c.json({ message: "Invalid blog ID" });
@@ -105,8 +118,11 @@ blogRouter.get('/bulk', async(c) => {
                 postedOn: true,
                 published: true,
                 authorId: true,
-                author: {
-                    select: {name: true},
+                author: {    //it is nested because it establishes relation b/w blog and user table.
+                    select: {
+                        name: true,
+                        username: true,
+                    },
                 },
             },
         });
@@ -120,6 +136,36 @@ blogRouter.get('/bulk', async(c) => {
         return c.json({"message": "Internal Server Error"});
     }
 });
+
+blogRouter.get ("/both", async(c)=> {
+    const prisma = new PrismaClient({
+        datasourceUrl: c.env.DATABASE_URL,
+    }).$extends(withAccelerate());
+
+    try{
+        const user = await prisma.user.findUnique({
+            where: {
+                id: parseInt(c.get("userId")),
+            },
+            select: {
+                id: true,
+                name: true,
+                username: true,
+                blogs: true,
+            },
+        });
+        return c.json({ user });
+    }
+    catch(err){
+        console.log("Error: ", err);
+        c.status(403);
+        c.json({
+            "message" : "Internal server error",
+        });
+    }
+});
+
+
 
 blogRouter.get("/:id", async(c) => {
     const id = c.req.param("id");
@@ -143,6 +189,7 @@ blogRouter.get("/:id", async(c) => {
                 author: {
                     select: {
                         name: true,
+                        username : true,
                     },
                 },
                 content: true,
@@ -198,32 +245,3 @@ blogRouter.delete("/:id", async (c) => {
 		});
 	}
 });
-
-blogRouter.get ("/both", async(c)=> {
-    const prisma = new PrismaClient({
-        datasourceUrl: c.env.DATABASE_URL,
-    }).$extends(withAccelerate());
-
-    try{
-        const user = await prisma.user.findUnique({
-            where: {
-                id: parseInt(c.get("userId")),
-            },
-            select: {
-                id: true,
-                name: true,
-                username: true,
-                blogs: true,
-            },
-        });
-        return c.json({ user });
-    }
-    catch(err){
-        console.log("Error: ", err);
-        c.status(403);
-        c.json({
-            "message" : "Internal server error",
-        });
-    }
-});
-

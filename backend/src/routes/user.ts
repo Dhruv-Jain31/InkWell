@@ -1,8 +1,8 @@
 import { Hono } from 'hono'
 import { PrismaClient } from '@prisma/client/edge'
-import { User } from '@prisma/client'
 import { withAccelerate } from '@prisma/extension-accelerate'
-import { decode,sign,verify } from 'hono/jwt'
+import { sign } from 'hono/jwt'
+import bcrypt from 'bcryptjs'
 
 export const userRouter = new Hono<{
     Bindings: {
@@ -41,10 +41,13 @@ userRouter.post('/signup', async (c) => {
     }
     console.log(find_user);
 
+    //hashing the password
+    const hashed_password = await bcrypt.hash(body.password,10);
+
     const user = await prisma.user.create({
       data: {
         username: body.username,
-        password: body.password,
+        password: hashed_password,
         name: body.name,
       }
     })
@@ -71,7 +74,6 @@ userRouter.post('/signin', async(c) => {
     const user = await prisma.user.findUnique({
       where:{
         username: body.username,
-        password: body.password,
       },
     });
 
@@ -80,6 +82,19 @@ userRouter.post('/signin', async(c) => {
       return c.json({
         error: "incorrect credentials",
       })
+    }
+
+    //comparing passwords
+    const password_match = await bcrypt.compare(body.password, user.password);
+    //body.password: The password entered by the user
+   //user.password: The hashed password stored in the database.
+
+
+    if (!password_match) {
+      c.status(ResponseStatus.Unauthorized);
+      return c.json({
+        error: "Incorrect credentials",
+      });
     }
     const jwt = await sign({
       id: user.id, username: user.username, name: user.name
