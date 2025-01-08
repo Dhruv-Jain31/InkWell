@@ -40,7 +40,7 @@ blogRouter.post('/', async(c) => {
                 content: body.content,
                 authorId: parseInt(c.get("userId")),
                 postedOn: indian_Time,
-                published: body.published,
+                published: true,
             },
         });
         return c.json({
@@ -85,43 +85,10 @@ blogRouter.put('/', async(c) => {
     }
 });
 
-blogRouter.get("/:id", async(c) => {
-    const id = c.req.param("id");
-
-    const prisma = new PrismaClient({
-        datasourceUrl: c.env.DATABASE_URL
-    }).$extends(withAccelerate());
-    try{
-        const blog = await prisma.blog.findUnique({
-            where: {
-                id : Number(id),
-            },
-            select: {
-                author: {
-                    select: {
-                        name: true,
-                    },
-                },
-                content: true,
-                title: true,
-                id: true,
-                postedOn: true,
-                published: true,
-                authorId: true,
-            }
-        });
-        return c.json({blog});
-    }
-    catch(err){
-        console.log("Error: ", err);
-        c.status(ResponseStatus.Error);
-        c.json({
-            "message": "Internal server error",
-        });
-    }
-});
-
 blogRouter.get('/bulk', async(c) => {
+    if (c.req.param("id")) {
+        return c.json({ message: "Invalid blog ID" });
+    }
     const prisma = new PrismaClient({
         datasourceUrl: c.env.DATABASE_URL,
     }).$extends(withAccelerate());
@@ -151,6 +118,57 @@ blogRouter.get('/bulk', async(c) => {
         console.log("Error: " + err);
         c.status(ResponseStatus.Error);
         return c.json({"message": "Internal Server Error"});
+    }
+});
+
+blogRouter.get("/:id", async(c) => {
+    const id = c.req.param("id");
+
+    const prisma = new PrismaClient({
+        datasourceUrl: c.env.DATABASE_URL
+    }).$extends(withAccelerate());
+    try{
+        //ensuring id is a number
+        if(!id || isNaN(Number(id))){
+            c.status(400);
+            return c.json({
+                "message" : "Invalid blog ID",
+            });
+        }
+        const blog = await prisma.blog.findUnique({
+            where: {
+                id : Number(id),
+            },
+            select: {
+                author: {
+                    select: {
+                        name: true,
+                    },
+                },
+                content: true,
+                title: true,
+                id: true,
+                postedOn: true,
+                published: true,
+                authorId: true,
+            }
+        });
+
+        //case where blog doesn't exist
+        if(!blog){
+            c.status(404);
+            return c.json({
+                "message" : "Blog not found",
+            })
+        }
+        return c.json({blog});
+    }
+    catch(err){
+        console.log("Error: ", err);
+        c.status(ResponseStatus.Error);
+        c.json({
+            "message": "Internal server error",
+        });
     }
 });
 
