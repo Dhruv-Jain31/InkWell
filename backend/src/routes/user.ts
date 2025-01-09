@@ -9,7 +9,6 @@ import {
          signinInput,
          updateUserDetailsInput,
 } from '@dhruv_npm/inkwell-common'
-import { Prisma } from '@prisma/client/extension'
 
 export const userRouter = new Hono<{
     Bindings: {
@@ -154,6 +153,13 @@ userRouter.put("/update",authMiddleware, async(c) => {
   }).$extends(withAccelerate());
 
   try{
+
+    // Check if the password is being updated
+    if (body.password) {
+    // Rehash the new password before saving
+    body.password = await bcrypt.hash(body.password, 10);
+    }
+
     const res = await prisma.user.update({
       where: {
         id : parseInt(c.get("userId"))
@@ -169,5 +175,40 @@ userRouter.put("/update",authMiddleware, async(c) => {
     return c.json({
       "message": "Internal Server Error",
     });
+  }
+});
+
+userRouter.get("/:id",authMiddleware, async(c) => {
+  const id = c.req.param("id");
+
+  const prisma = new PrismaClient({
+    datasourceUrl : c.env.DATABASE_URL,
+  }).$extends(withAccelerate());
+
+  try{
+    const user = await prisma.user.findUnique({
+      where: {
+        id: Number(id),
+      },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        blogs: {
+          where: {
+            published: true,
+          },
+        },
+      },
+    });
+    console.log(user);
+    return c.json({ user });
+  }
+  catch(err){
+    console.log("Error:" + err);
+    c.status(403);
+    return c.json({
+      "message": "Internal server error",
+    })
   }
 });

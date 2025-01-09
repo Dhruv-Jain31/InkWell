@@ -1,7 +1,11 @@
 import { PrismaClient } from "@prisma/client/edge";
 import { withAccelerate } from "@prisma/extension-accelerate";
 import { Hono } from "hono";
-import authMiddleware from "../authMiddleware"
+import authMiddleware from "../authMiddleware";
+import {
+    blogCreateInput,
+    blogUpdateInput,
+} from "@dhruv_npm/inkwell-common";
 import * as moment from "moment-timezone";
 
 export const blogRouter = new Hono<{
@@ -28,10 +32,19 @@ enum ResponseStatus {
 blogRouter.post('/', async(c) => {
     console.log("POST /blog hit");
     const body = await c.req.json();
+    const { success } = blogCreateInput.safeParse(body);
+
+    if(!success){
+        c.status(411);
+        return c.json({
+            "message" : "Invalid Inputs",
+        });
+    }
 
     const prisma = new PrismaClient({
         datasourceUrl: c.env?.DATABASE_URL,
     }).$extends(withAccelerate());
+
     try{
         const indian_Time = moment.tz("Asia/Kolkata").format("D/M/YYYY, h:mm:ss");
         const blog = await prisma.blog.create({
@@ -56,10 +69,17 @@ blogRouter.post('/', async(c) => {
 
 blogRouter.put('/', async(c) => {
     const body = await c.req.json();
-
+    const { success } = blogUpdateInput.safeParse(body);
+    if(!success){
+        c.status(411);
+        return c.json({
+            "message": "Invalid Inputs",
+        });
+    }
     const prisma = new PrismaClient({
         datasourceUrl: c.env.DATABASE_URL,
     }).$extends(withAccelerate());
+
     try{
         const blog = await prisma.blog.update({
             where:{
@@ -102,6 +122,7 @@ blogRouter.get('/bulk', async(c) => {
     if (c.req.param("id")) {
         return c.json({ message: "Invalid blog ID" });
     }
+
     const prisma = new PrismaClient({
         datasourceUrl: c.env.DATABASE_URL,
     }).$extends(withAccelerate());
@@ -189,7 +210,6 @@ blogRouter.get("/:id", async(c) => {
                 author: {
                     select: {
                         name: true,
-                        username : true,
                     },
                 },
                 content: true,
