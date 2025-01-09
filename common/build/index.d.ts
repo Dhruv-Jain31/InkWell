@@ -13,22 +13,25 @@ export declare const signupInput: z.ZodObject<{
     name: string;
 }>;
 export declare const signinInput: z.ZodObject<{
-    email: z.ZodString;
+    username: z.ZodString;
     password: z.ZodString;
 }, "strip", z.ZodTypeAny, {
+    username: string;
     password: string;
-    email: string;
 }, {
+    username: string;
     password: string;
-    email: string;
 }>;
 export declare const updateUserDetailsInput: z.ZodObject<{
     name: z.ZodOptional<z.ZodString>;
     password: z.ZodOptional<z.ZodString>;
+    username: z.ZodString;
 }, "strip", z.ZodTypeAny, {
+    username: string;
     password?: string | undefined;
     name?: string | undefined;
 }, {
+    username: string;
     password?: string | undefined;
     name?: string | undefined;
 }>;

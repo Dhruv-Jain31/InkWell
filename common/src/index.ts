@@ -7,13 +7,14 @@ export const signupInput = z.object({
 });
 
 export const signinInput = z.object({
-    email: z.string().email(),
+    username: z.string().email(),
     password: z.string().min(6),
 });
 
 export const updateUserDetailsInput = z.object({
     name: z.string().optional(),
     password: z.string().min(6).optional(),
+    username: z.string().email(),
 });
 
 export const blogCreateInput = z.object({

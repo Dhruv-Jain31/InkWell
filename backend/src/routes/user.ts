@@ -3,11 +3,21 @@ import { PrismaClient } from '@prisma/client/edge'
 import { withAccelerate } from '@prisma/extension-accelerate'
 import { sign } from 'hono/jwt'
 import bcrypt from 'bcryptjs'
+import authMiddleware from '../authMiddleware'
+import {
+         signupInput,
+         signinInput,
+         updateUserDetailsInput,
+} from '@dhruv_npm/inkwell-common'
+import { Prisma } from '@prisma/client/extension'
 
 export const userRouter = new Hono<{
     Bindings: {
       DATABASE_URL: string;
       JWT_SECRET: string;
+    };
+    Variables: {
+      userId: string;
     }
 }>() // tells typescript the data type of url in the .toml file
 
@@ -22,6 +32,15 @@ enum ResponseStatus {
 
 userRouter.post('/signup', async (c) => {
   const body = await c.req.json();
+  const { success } = signupInput.safeParse(body);
+
+  if (!success){
+    c.status(ResponseStatus.Unauthorized);
+    return c.json({
+      "message": "Invalid Inputs",
+    });
+  }
+
   const prisma = new PrismaClient({
     datasourceUrl: c.env.DATABASE_URL, //through c var we have the access of database url so can't dec it globally
   }).$extends(withAccelerate())
@@ -66,6 +85,15 @@ userRouter.post('/signup', async (c) => {
 
 userRouter.post('/signin', async(c) => {
   const body = await c.req.json();
+  const { success } = signinInput.safeParse(body);
+
+  if(!success){
+    c.status(ResponseStatus.Refuse);
+    return c.json({
+      "message" : "Invalid Inputs",
+    });
+  }
+
   const prisma = new PrismaClient({
     datasourceUrl: c.env.DATABASE_URL, //through c var we have the access of database url so can't dec it globally
   }).$extends(withAccelerate())
@@ -96,6 +124,7 @@ userRouter.post('/signin', async(c) => {
         error: "Incorrect credentials",
       });
     }
+
     const jwt = await sign({
       id: user.id, username: user.username, name: user.name
     },c.env.JWT_SECRET);
@@ -105,5 +134,40 @@ userRouter.post('/signin', async(c) => {
     c.status(ResponseStatus.Refuse);
     console.log("error",e);
     return c.json({"message": "error in signing in"});
+  }
+});
+
+userRouter.put("/update",authMiddleware, async(c) => {
+  const body = await c.req.json();
+
+  const { success } = updateUserDetailsInput.safeParse(body);
+
+  if(!success){
+    c.status(ResponseStatus.Unauthorized);
+    return c.json({
+      "message": "Invalid Inputs",
+    });
+  }
+
+  const prisma = new PrismaClient({
+    datasourceUrl: c.env.DATABASE_URL,
+  }).$extends(withAccelerate());
+
+  try{
+    const res = await prisma.user.update({
+      where: {
+        id : parseInt(c.get("userId"))
+      },
+      data: body, //we can include fields that are optional or updatable in your User model.
+    });
+    return c.json({
+      "message" : "Details Updated",
+    });
+  }
+  catch(err){
+    c.status(403);
+    return c.json({
+      "message": "Internal Server Error",
+    });
   }
 });

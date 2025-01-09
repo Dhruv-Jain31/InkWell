@@ -11,12 +11,13 @@ exports.signupInput = zod_1.default.object({
     name: zod_1.default.string(),
 });
 exports.signinInput = zod_1.default.object({
-    email: zod_1.default.string().email(),
+    username: zod_1.default.string().email(),
     password: zod_1.default.string().min(6),
 });
 exports.updateUserDetailsInput = zod_1.default.object({
     name: zod_1.default.string().optional(),
     password: zod_1.default.string().min(6).optional(),
+    username: zod_1.default.string().email(),
 });
 exports.blogCreateInput = zod_1.default.object({
     title: zod_1.default.string(),
