@@ -1,4 +1,4 @@
-# Blogging App Like Medium
+# Inkwell
 
 This is a blogging application inspired by Medium. The project is built from scratch using a modern tech stack and deployed on Vercel and Cloudflare Workers.
 
@@ -42,7 +42,7 @@ Follow these instructions to set up the project locally.
  1.  Clone the repository:
 	
 
-	    git clone https://github.com/syedahmedullah14/blogging-app-like-medium.git
+	    git clone https://github.com/Dhruv-Jain31/InkWell.git
 
  2. Navigate to the project directory:
  
